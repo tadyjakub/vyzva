@@ -14,6 +14,8 @@
     --green-soft: #e3efe4;
     --red: #a3311c;
     --red-soft: #f6e6e0;
+    --amber: #96650a;
+    --amber-soft: #f3e8d2;
     --line: #d8d0bc;
   }
   * { box-sizing: border-box; }
@@ -165,6 +167,7 @@
   }
   .totals-row.fine { color: var(--red); font-weight: 700; }
   .totals-row.ok { color: var(--green); font-weight: 700; }
+  .totals-row.threat { color: var(--amber); font-weight: 700; }
 
   .summary-table {
     width: 100%;
@@ -193,6 +196,7 @@
   }
   .pill.fine { background: var(--red-soft); color: var(--red); }
   .pill.ok { background: var(--green-soft); color: var(--green); }
+  .pill.threat { background: var(--amber-soft); color: var(--amber); }
 
   .grand {
     margin-top: 18px;
@@ -324,25 +328,31 @@ function elapsedDaysInWeek(weekKey) {
   return diff; // dny 0..diff-1 už proběhly, dnešek ještě běží
 }
 
-function catRealMiss(w, p, cat, elapsed) {
+function isWeekFinal(weekKey) {
+  return elapsedDaysInWeek(weekKey) >= 7;
+}
+
+// Hrozba se počítá ze všech 7 dnů (bez ohledu na to, zda už proběhly) –
+// ukazuje plnou potenciální pokutu, která klesá s každým odškrtnutím.
+function catThreat(w, p, cat) {
   const allowed = 7 - cat.target;
-  let missed = 0;
-  for (let i = 0; i < elapsed; i++) if (!w[p][i][cat.key]) missed++;
-  return { real: Math.max(0, missed - allowed), missed, allowed };
+  let checked = 0;
+  for (let i = 0; i < 7; i++) if (w[p][i][cat.key]) checked++;
+  const missed = 7 - checked;
+  return { threat: Math.max(0, missed - allowed), missed, allowed };
 }
 
 function weekStats(weekKey) {
   const w = getWeek(weekKey);
-  const elapsed = elapsedDaysInWeek(weekKey);
   const stats = {};
   PEOPLE.forEach(p => {
-    let fine = 0, sins = 0;
+    let threat = 0, sins = 0;
     CATS.forEach(cat => {
-      const { real } = catRealMiss(w, p, cat, elapsed);
-      fine += real * FINE_PER_MISS;
-      sins += real;
+      const { threat: t } = catThreat(w, p, cat);
+      threat += t * FINE_PER_MISS;
+      sins += t;
     });
-    stats[p] = { fine, sins };
+    stats[p] = { threat, sins };
   });
   return stats;
 }
@@ -350,9 +360,11 @@ function grandStats() {
   const totals = {};
   PEOPLE.forEach(p => totals[p] = { fine: 0, sins: 0 });
   Object.keys(data.weeks).forEach(wk => {
+    // do celkové kasy se týden započítá až když skutečně skončil
+    if (!isWeekFinal(wk)) return;
     const s = weekStats(wk);
     PEOPLE.forEach(p => {
-      totals[p].fine += s[p].fine;
+      totals[p].fine += s[p].threat;
       totals[p].sins += s[p].sins;
     });
   });
@@ -366,11 +378,11 @@ function render() {
   const week = getWeek(weekKey);
   const stats = weekStats(weekKey);
   const g = grandStats();
-  const elapsed = elapsedDaysInWeek(weekKey);
+  const weekFinal = isWeekFinal(weekKey);
   const bufferInfo = {};
   CATS.forEach(cat => {
-    const { real, missed, allowed } = catRealMiss(week, activePerson, cat, elapsed);
-    bufferInfo[cat.key] = real > 0 ? `−${real}×` : `${Math.max(0, allowed - missed)} rez.`;
+    const { threat, missed, allowed } = catThreat(week, activePerson, cat);
+    bufferInfo[cat.key] = threat > 0 ? `−${threat}×` : `${Math.max(0, allowed - missed)} rez.`;
   });
 
   const app = document.getElementById("app");
@@ -409,9 +421,9 @@ function render() {
       <span>splněno = zaškrtnuto</span>
     </div>
     <div class="totals">
-      <div class="totals-row ${stats[activePerson].fine > 0 ? "fine" : "ok"}">
-        <span>${activePerson} – pokuta tento týden</span>
-        <span>${stats[activePerson].fine} Kč</span>
+      <div class="totals-row ${weekFinal ? (stats[activePerson].threat > 0 ? "fine" : "ok") : (stats[activePerson].threat > 0 ? "threat" : "ok")}">
+        <span>${weekFinal ? `${activePerson} – pokuta tento týden` : "Ve vzduchu ti visí"}</span>
+        <span>${stats[activePerson].threat} Kč</span>
       </div>
       <div class="totals-row">
         <span>počet prohřešků</span>
@@ -421,13 +433,13 @@ function render() {
     <hr class="rule">
     <table class="summary-table">
       <thead>
-        <tr><th>Jméno</th><th class="num">Týden</th><th class="num">Prohř.</th></tr>
+        <tr><th>Jméno</th><th class="num">${weekFinal ? "Týden" : "Hrozba"}</th><th class="num">Prohř.</th></tr>
       </thead>
       <tbody>
         ${PEOPLE.map(p => `
           <tr>
             <td>${p}</td>
-            <td class="num"><span class="pill ${stats[p].fine > 0 ? "fine" : "ok"}">${stats[p].fine} Kč</span></td>
+            <td class="num"><span class="pill ${weekFinal ? (stats[p].threat > 0 ? "fine" : "ok") : (stats[p].threat > 0 ? "threat" : "ok")}">${stats[p].threat} Kč</span></td>
             <td class="num">${stats[p].sins}×</td>
           </tr>
         `).join("")}
