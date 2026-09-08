@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Výzva – pokutový lístek</title>
+<style>
+  :root {
+    --paper: #faf7ef;
+    --paper-edge: #ece6d6;
+    --ink: #1c1a15;
+    --ink-soft: #6b6558;
+    --green: #1a6b3c;
+    --green-soft: #e3efe4;
+    --red: #a3311c;
+    --red-soft: #f6e6e0;
+    --line: #d8d0bc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px 16px 80px;
+    background: #e9e4d6;
+    background-image: radial-gradient(circle at 1px 1px, #d9d2bc 1px, transparent 0);
+    background-size: 18px 18px;
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+  }
+  .receipt {
+    width: 100%;
+    max-width: 440px;
+    background: var(--paper);
+    box-shadow: 0 18px 40px rgba(20,18,10,0.18);
+    position: relative;
+    padding: 28px 22px 20px;
+  }
+  .receipt::before, .receipt::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    height: 12px;
+    background:
+      radial-gradient(circle at 8px 6px, transparent 6px, var(--paper) 6.5px) 0 0/16px 12px repeat-x;
+  }
+  .receipt::before { top: -6px; }
+  .receipt::after { bottom: -6px; transform: rotate(180deg); }
+
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: 0.5px;
+    text-align: center;
+    margin: 0 0 2px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+  .rule {
+    border: none;
+    border-top: 1.5px dashed var(--line);
+    margin: 16px 0;
+  }
+  .rules-box {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .rules-box b { color: var(--ink); }
+
+  .week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 18px 0 14px;
+  }
+  .week-nav button {
+    background: none;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    width: 30px; height: 30px;
+    font-family: inherit;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .week-nav button:active { background: var(--ink); color: var(--paper); }
+  .week-label {
+    font-size: 13px;
+    text-align: center;
+    font-weight: 700;
+  }
+  .week-label span {
+    display: block;
+    font-weight: 400;
+    color: var(--ink-soft);
+    font-size: 11px;
+    margin-top: 1px;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .tabs button {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 2px;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .tabs button.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  table.grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  table.grid th, table.grid td {
+    border-bottom: 1px solid var(--line);
+    padding: 7px 2px;
+    text-align: center;
+  }
+  table.grid th {
+    font-weight: 700;
+    color: var(--ink-soft);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  table.grid td:first-child, table.grid th:first-child {
+    text-align: left;
+    font-weight: 700;
+    padding-left: 2px;
+  }
+  input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: var(--green);
+    cursor: pointer;
+  }
+
+  .totals {
+    margin-top: 14px;
+    font-size: 12px;
+  }
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px dotted var(--line);
+  }
+  .totals-row.fine { color: var(--red); font-weight: 700; }
+  .totals-row.ok { color: var(--green); font-weight: 700; }
+
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  .summary-table th {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-align: left;
+    padding: 4px 4px;
+    border-bottom: 1.5px solid var(--ink);
+  }
+  .summary-table td {
+    padding: 6px 4px;
+    border-bottom: 1px dotted var(--line);
+  }
+  .summary-table td.num, .summary-table th.num { text-align: right; }
+  .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .pill.fine { background: var(--red-soft); color: var(--red); }
+  .pill.ok { background: var(--green-soft); color: var(--green); }
+
+  .grand {
+    margin-top: 18px;
+    text-align: center;
+  }
+  .grand .amount {
+    font-family: Georgia, serif;
+    font-size: 32px;
+    font-weight: 700;
+  }
+  .grand .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+  }
+  .barcode {
+    margin: 20px auto 0;
+    height: 34px;
+    width: 80%;
+    background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 5px, var(--ink) 5px 6px, transparent 6px 9px, var(--ink) 9px 12px, transparent 12px 14px);
+    opacity: 0.85;
+  }
+  .footer-note {
+    text-align: center;
+    font-size: 10px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+  .status {
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding: 40px 0;
+  }
+  .legend {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="receipt" id="app">
+    <div class="status">Načítám lístek…</div>
+  </div>
+
+<script>
+const PEOPLE = ["Bájka", "Marty", "Móňa", "Kuba"];
+const CATS = [
+  { key: "sleep", label: "Spánek do 23:00", target: 6 },
+  { key: "exercise", label: "Cvičení", target: 5 },
+  { key: "sweets", label: "Bez sladkého", target: 6 }
+];
+const DAYS = ["Po", "Út", "St", "Čt", "Pá", "So", "Ne"];
+const FINE_PER_MISS = 200;
+const STORE_KEY = "vyzva-data";
+
+let data = { weeks: {} };
+let currentWeekStart = mondayOf(new Date());
+let activePerson = PEOPLE[0];
+
+function mondayOf(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function fmtDate(d) {
+  return d.toISOString().slice(0,10);
+}
+function fmtRange(monday) {
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const o = { day: "numeric", month: "numeric" };
+  return `${monday.toLocaleDateString("cs-CZ", o)} – ${sunday.toLocaleDateString("cs-CZ", o)}`;
+}
+function emptyWeek() {
+  const w = {};
+  PEOPLE.forEach(p => {
+    w[p] = {};
+    for (let i = 0; i < 7; i++) w[p][i] = { sleep: false, exercise: false, sweets: false };
+  });
+  return w;
+}
+function getWeek(key) {
+  if (!data.weeks[key]) data.weeks[key] = emptyWeek();
+  return data.weeks[key];
+}
+
+const API_URL = "/.netlify/functions/data";
+
+async function load() {
+  try {
+    const res = await fetch(API_URL);
+    if (res.ok) {
+      const json = await res.json();
+      data = json && json.weeks ? json : { weeks: {} };
+    }
+  } catch (e) {
+    data = { weeks: {} };
+  }
+  render();
+}
+async function save() {
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+  } catch (e) {
+    console.error("Uložení selhalo", e);
+  }
+}
+
+function elapsedDaysInWeek(weekKey) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const start = new Date(weekKey + "T00:00:00");
+  const diff = Math.round((now - start) / 86400000);
+  if (diff >= 7) return 7;
+  if (diff < 0) return 0;
+  return diff; // dny 0..diff-1 už proběhly, dnešek ještě běží
+}
+
+function catRealMiss(w, p, cat, elapsed) {
+  const allowed = 7 - cat.target;
+  let missed = 0;
+  for (let i = 0; i < elapsed; i++) if (!w[p][i][cat.key]) missed++;
+  return { real: Math.max(0, missed - allowed), missed, allowed };
+}
+
+function weekStats(weekKey) {
+  const w = getWeek(weekKey);
+  const elapsed = elapsedDaysInWeek(weekKey);
+  const stats = {};
+  PEOPLE.forEach(p => {
+    let fine = 0, sins = 0;
+    CATS.forEach(cat => {
+      const { real } = catRealMiss(w, p, cat, elapsed);
+      fine += real * FINE_PER_MISS;
+      sins += real;
+    });
+    stats[p] = { fine, sins };
+  });
+  return stats;
+}
+function grandStats() {
+  const totals = {};
+  PEOPLE.forEach(p => totals[p] = { fine: 0, sins: 0 });
+  Object.keys(data.weeks).forEach(wk => {
+    const s = weekStats(wk);
+    PEOPLE.forEach(p => {
+      totals[p].fine += s[p].fine;
+      totals[p].sins += s[p].sins;
+    });
+  });
+  let grandFine = 0;
+  PEOPLE.forEach(p => grandFine += totals[p].fine);
+  return { totals, grandFine };
+}
+
+function render() {
+  const weekKey = fmtDate(currentWeekStart);
+  const week = getWeek(weekKey);
+  const stats = weekStats(weekKey);
+  const g = grandStats();
+  const elapsed = elapsedDaysInWeek(weekKey);
+  const bufferInfo = {};
+  CATS.forEach(cat => {
+    const { real, missed, allowed } = catRealMiss(week, activePerson, cat, elapsed);
+    bufferInfo[cat.key] = real > 0 ? `−${real}×` : `${Math.max(0, allowed - missed)} rez.`;
+  });
+
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <h1>VÝZVA</h1>
+    <div class="subtitle">Bájka · Marty · Móňa · Kuba</div>
+    <div class="rules-box">
+      <b>${CATS[0].target}×</b> spánek do 23 · <b>${CATS[1].target}×</b> cvičení · <b>${CATS[2].target}×</b> bez sladkého<br>
+      za každý nesplněný den <b>${FINE_PER_MISS} Kč</b>
+    </div>
+    <hr class="rule">
+    <div class="week-nav">
+      <button id="prevWeek">‹</button>
+      <div class="week-label">${fmtRange(currentWeekStart)}<span>týden</span></div>
+      <button id="nextWeek">›</button>
+    </div>
+    <div class="tabs">
+      ${PEOPLE.map(p => `<button data-person="${p}" class="${p === activePerson ? "active" : ""}">${p}</button>`).join("")}
+    </div>
+    <table class="grid">
+      <thead>
+        <tr><th>Den</th><th>Spán.<br><span style="font-weight:400;color:var(--ink-soft);text-transform:none;">${bufferInfo.sleep}</span></th><th>Cvič.<br><span style="font-weight:400;color:var(--ink-soft);text-transform:none;">${bufferInfo.exercise}</span></th><th>Slad.<br><span style="font-weight:400;color:var(--ink-soft);text-transform:none;">${bufferInfo.sweets}</span></th></tr>
+      </thead>
+      <tbody>
+        ${DAYS.map((d, i) => `
+          <tr>
+            <td>${d}</td>
+            <td><input type="checkbox" data-day="${i}" data-cat="sleep" ${week[activePerson][i].sleep ? "checked" : ""}></td>
+            <td><input type="checkbox" data-day="${i}" data-cat="exercise" ${week[activePerson][i].exercise ? "checked" : ""}></td>
+            <td><input type="checkbox" data-day="${i}" data-cat="sweets" ${week[activePerson][i].sweets ? "checked" : ""}></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    <div class="legend">
+      <span>splněno = zaškrtnuto</span>
+    </div>
+    <div class="totals">
+      <div class="totals-row ${stats[activePerson].fine > 0 ? "fine" : "ok"}">
+        <span>${activePerson} – pokuta tento týden</span>
+        <span>${stats[activePerson].fine} Kč</span>
+      </div>
+      <div class="totals-row">
+        <span>počet prohřešků</span>
+        <span>${stats[activePerson].sins}×</span>
+      </div>
+    </div>
+    <hr class="rule">
+    <table class="summary-table">
+      <thead>
+        <tr><th>Jméno</th><th class="num">Týden</th><th class="num">Prohř.</th></tr>
+      </thead>
+      <tbody>
+        ${PEOPLE.map(p => `
+          <tr>
+            <td>${p}</td>
+            <td class="num"><span class="pill ${stats[p].fine > 0 ? "fine" : "ok"}">${stats[p].fine} Kč</span></td>
+            <td class="num">${stats[p].sins}×</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    <hr class="rule">
+    <div style="font-size:11px; color:var(--ink-soft); text-align:center; margin-bottom:6px;">celkem od začátku výzvy</div>
+    <table class="summary-table">
+      <thead>
+        <tr><th>Jméno</th><th class="num">Celkem</th><th class="num">Prohř.</th></tr>
+      </thead>
+      <tbody>
+        ${PEOPLE.map(p => `
+          <tr>
+            <td>${p}</td>
+            <td class="num">${g.totals[p].fine} Kč</td>
+            <td class="num">${g.totals[p].sins}×</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+    <div class="grand">
+      <div class="label">Celková kasa</div>
+      <div class="amount">${g.grandFine} Kč</div>
+    </div>
+    <div class="barcode"></div>
+    <div class="footer-note">DĚKUJEME · VYDRŽTE · ZAPLAŤ A JDI DÁL</div>
+  `;
+
+  document.getElementById("prevWeek").onclick = () => {
+    currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+    currentWeekStart = new Date(currentWeekStart);
+    render();
+  };
+  document.getElementById("nextWeek").onclick = () => {
+    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+    currentWeekStart = new Date(currentWeekStart);
+    render();
+  };
+  app.querySelectorAll(".tabs button").forEach(btn => {
+    btn.onclick = () => { activePerson = btn.dataset.person; render(); };
+  });
+  app.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.onchange = () => {
+      const day = cb.dataset.day, cat = cb.dataset.cat;
+      getWeek(weekKey)[activePerson][day][cat] = cb.checked;
+      save();
+      render();
+    };
+  });
+}
+
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>
